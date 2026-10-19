@@ -18,6 +18,6 @@ final class PingController extends AbstractController         // ②
     #[Route('/hello/{name}', name: 'hello', methods: ['GET'], requirements: ['name' => '[A-Za-z0-9_]{2,30}'])]
     public function hello(string $name): JsonResponse      // {name} dans l'URL → argument $name (même nom)
     {
-        return $this->json(["message" => "GG Zer0Day !"]);
+        return $this->json(['message' => sprintf('GG %s !', $name)]);
     }
 }

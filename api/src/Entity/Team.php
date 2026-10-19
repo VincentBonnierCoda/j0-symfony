@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\TeamRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -25,14 +27,14 @@ class Team
     #[ORM\Column(length: 50, unique: true)]
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 50)]
-    #[Groups(['team:read', 'team:write'])]
+    #[Groups(['team:read', 'team:write', 'player:read'])]
     private ?string $name = null;
 
     /** Abréviation affichée sur les scoreboards : 2 à 5 majuscules ou chiffres (ex. « NUL »). */
     #[ORM\Column(length: 5, unique: true)]
     #[Assert\NotBlank]
     #[Assert\Regex('/^[A-Z0-9]{2,5}$/', message: 'Le tag doit faire 2 à 5 caractères en majuscules ou chiffres.')]
-    #[Groups(['team:read', 'team:write'])]
+    #[Groups(['team:read', 'team:write', 'player:read'])]
     private ?string $tag = null;
 
     /** Pays de l'équipe, code ISO 3166-1 alpha-2 (ex. « FR »). */
@@ -41,6 +43,19 @@ class Team
     #[Assert\Country]
     #[Groups(['team:read', 'team:write'])]
     private ?string $country = null;
+
+    /**
+     * @var Collection<int, Player>
+     */
+    #[ORM\OneToMany(targetEntity: Player::class, mappedBy: 'team')]
+    #[ORM\OrderBy(['nickname' => 'ASC'])]
+    #[Groups(['team:read'])]
+    private Collection $players;
+
+    public function __construct()
+    {
+        $this->players = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -79,6 +94,36 @@ class Team
     public function setCountry(string $country): static
     {
         $this->country = $country;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Player>
+     */
+    public function getPlayers(): Collection
+    {
+        return $this->players;
+    }
+
+    public function addPlayer(Player $player): static
+    {
+        if (!$this->players->contains($player)) {
+            $this->players->add($player);
+            $player->setTeam($this);
+        }
+
+        return $this;
+    }
+
+    public function removePlayer(Player $player): static
+    {
+        if ($this->players->removeElement($player)) {
+            // set the owning side to null (unless already changed)
+            if ($player->getTeam() === $this) {
+                $player->setTeam(null);
+            }
+        }
 
         return $this;
     }
