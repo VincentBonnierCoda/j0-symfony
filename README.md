@@ -54,7 +54,7 @@ Quand c'est terminé :
 
 | | |
 |---|---|
-| Votre API, avec sa documentation interactive (Swagger UI) | http://localhost:8000/api |
+| Votre API, avec sa documentation interactive (Swaggemake r UI) | http://localhost:8000/api |
 | Le profiler Symfony (ce qui s'est passé pour chaque requête) | http://localhost:8000/_profiler |
 | PostgreSQL (DBeaver, DataGrip…) | `localhost:5433`, base `app`, utilisateur `app`, mot de passe `app` |
 

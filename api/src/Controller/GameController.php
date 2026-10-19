@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Game;
+use App\Enum\Genre;
 use App\Repository\GameRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -11,6 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -52,12 +54,14 @@ final class GameController extends AbstractController
 
     /** GET /api/games → 200 + tableau JSON. */
     #[Route('', name: 'list', methods: ['GET'])]
-    public function list(GameRepository $games): JsonResponse
-    {
-        // findBy(critères, tri) : SELECT * FROM game ORDER BY name ASC
-        $list = $games->findBy([], ['name' => 'ASC']);
 
-        // $this->json() transforme les objets en JSON (composant Serializer) : un champ par getter.
+    public function list(
+        GameRepository $games,
+        #[MapQueryParameter] ?Genre $genre = null,                 // ?genre=fps → Genre::Fps ; absent → null
+    ): JsonResponse {
+        $criteria = null !== $genre ? ['genre' => $genre] : [];    // [] = aucun filtre
+        $list = $games->findBy($criteria, ['name' => 'ASC']);
+
         return $this->json($list);
     }
 
@@ -135,4 +139,6 @@ final class GameController extends AbstractController
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }
+
+
 }
