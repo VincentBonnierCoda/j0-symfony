@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Team;
+use App\Enum\Genre;
 use App\Repository\TeamRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -11,6 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -19,6 +21,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Serializer\Exception\ExceptionInterface as SerializerException;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Constraints\Country;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -30,31 +33,21 @@ final class TeamController extends AbstractController
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-    )
-    {
+    ) {
     }
 
     /** GET /api/teams */
-    #[Route('', name: 'list', methods: ['GET'], )]
-
-    public function list(TeamRepository $teams): JsonResponse
+    #[Route('', name: 'list', methods: ['GET'])]
+    public function list(TeamRepository $teams,#[MapQueryParameter] ?string $country = null,)
     {
-
-        return $this->json($teams->findAll(), context: self::READ);
+        $criteria = null !== $country ? ['country' => strtoupper($country)] : [];
+        $list = $teams->findBy($criteria, ['name' => 'ASC']);// [] = aucun filtre
+        return $this->json($list, context: self::READ);
     }
 
     /** GET /api/teams/{id} */
-    #[Route(
-        '/{id}',
-        name: 'show',
-        methods: ['GET'],
-        requirements: ['id' => Requirement::DIGITS],
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Équipe demandée',
-        content: new Model(type: Team::class, groups: ['team:read']),
-    )]
+    #[Route('/{id}', name: 'show', methods: ['GET'], requirements: ['id' => Requirement::DIGITS])]
+    #[OA\Response(response: 200, description: 'Équipe demandée', content: new Model(type: Team::class, groups: ['team:read']))]
     #[OA\Response(response: 404, description: 'Équipe introuvable')]
     public function show(Team $team): JsonResponse
     {
@@ -63,19 +56,12 @@ final class TeamController extends AbstractController
 
     /** POST /api/teams */
     #[Route('', name: 'create', methods: ['POST'])]
-    #[OA\Response(
-        response: 201,
-        description: 'Équipe créée ; son URL est dans l’en-tête Location',
-    )]
+    #[OA\Response(response: 201, description: 'Équipe créée ; son URL est dans l’en-tête Location')]
     #[OA\Response(response: 422, description: 'Données invalides')]
     public function create(
-        #[MapRequestPayload(
-            acceptFormat: 'json',
-            serializationContext: self::WRITE,
-        )]
+        #[MapRequestPayload(acceptFormat: 'json', serializationContext: self::WRITE)]
         Team $team,
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $this->em->persist($team);
         $this->em->flush();
 
@@ -92,19 +78,13 @@ final class TeamController extends AbstractController
     }
 
     /** PATCH /api/teams/{id} */
-    #[Route(
-        '/{id}',
-        name: 'update',
-        methods: ['PATCH'],
-        requirements: ['id' => Requirement::DIGITS],
-    )]
+    #[Route('/{id}', name: 'update', methods: ['PATCH'], requirements: ['id' => Requirement::DIGITS])]
     public function update(
-        Team                $team,
-        Request             $request,
+        Team $team,
+        Request $request,
         SerializerInterface $serializer,
-        ValidatorInterface  $validator,
-    ): JsonResponse
-    {
+        ValidatorInterface $validator,
+    ): JsonResponse {
         try {
             $serializer->deserialize(
                 $request->getContent(),
@@ -117,7 +97,7 @@ final class TeamController extends AbstractController
             );
         } catch (SerializerException $e) {
             throw new BadRequestHttpException(
-                'Corps de requête invalide : ' . $e->getMessage(),
+                'Corps de requête invalide : '.$e->getMessage(),
                 $e,
             );
         }
@@ -126,7 +106,7 @@ final class TeamController extends AbstractController
 
         if (\count($violations) > 0) {
             throw new UnprocessableEntityHttpException(
-                (string)$violations,
+                (string) $violations,
                 new ValidationFailedException($team, $violations),
             );
         }
@@ -137,12 +117,7 @@ final class TeamController extends AbstractController
     }
 
     /** DELETE /api/teams/{id} */
-    #[Route(
-        '/{id}',
-        name: 'delete',
-        methods: ['DELETE'],
-        requirements: ['id' => Requirement::DIGITS],
-    )]
+    #[Route('/{id}', name: 'delete', methods: ['DELETE'], requirements: ['id' => Requirement::DIGITS])]
     public function delete(Team $team): Response
     {
         $this->em->remove($team);
