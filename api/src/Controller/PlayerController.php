@@ -38,6 +38,9 @@ final class PlayerController extends AbstractController
         PlayerRepository $players,
         #[MapQueryParameter] ?int $team = null,
         #[MapQueryParameter] ?string $country = null,
+        #[MapQueryParameter(options: ['min_range' => 1], validationFailedStatusCode: Response::HTTP_BAD_REQUEST)]
+        int $page = 1,
+
     ): JsonResponse {
         $criteria = [];
 
@@ -49,9 +52,14 @@ final class PlayerController extends AbstractController
             $criteria['country'] = strtoupper($country);
         }
 
-        $list = $players->findBy($criteria, ['nickname' => 'ASC']);
-
-        return $this->json($list, context: self::READ);
+        $list = $players->findBy($criteria, ['nickname' => 'ASC'], 10, ($page - 1) * 10);
+        $total = $players->count($criteria) ;
+        return $this->json(
+            $list,
+            Response::HTTP_OK,
+            ['X-Total-Count' => (string) $total],
+            self::READ,
+        );
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'], requirements: ['id' => Requirement::DIGITS])]
